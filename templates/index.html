@@ -14,5 +14,17 @@
         <p>{{translated}}</p>
         <p>{{result}}</p>
         {% endif %}
+
+        
+        {% if info %}
+        <h2>Tweets:</h2>
+        <p> Usernames: {{ info.0 }} </p>
+        <p> Followers: {{ info.1 }} </p>
+        <p> Tweets: {{ info.2 }} </p>
+        <p> Locations: {{ info.3 }} </p>
+        <p> Retweets: {{ info.4 }} </p>
+        <p> Favs: {{ info.5 }} </p>
+        <p> Urls: {{ info.6 }} </p>
+        {% endif %}
     </body>
 </html>
