@@ -15,12 +15,12 @@ with open("frases.txt","r") as f:
                 positive += 1
                 print(line)
                 print(eng)
-            elif eng.sentiment.polarity == 0:
-                print("___Neutral___",eng.sentiment)
-                neutral += 1
-                print(line)
-                print(eng)
-            elif eng.sentiment.polarity < 0:
+            # elif eng.sentiment.polarity == 0:
+            #     print("___Neutral___",eng.sentiment)
+            #     neutral += 1
+            #     print(line)
+            #     print(eng)
+            elif eng.sentiment.polarity <= 0:
                 print("___Negativa___",eng.sentiment)
                 negative += 1
                 print(line)
@@ -32,7 +32,7 @@ with open("frases.txt","r") as f:
 
 
 print("Precisión positiva = {}% via {}/{} ejemplos".format(positive/count*100.0,positive, count))
-print("Precisión neutral = {}% via {}/{} ejemplos".format(neutral/count*100.0,neutral, count))
+#print("Precisión neutral = {}% via {}/{} ejemplos".format(neutral/count*100.0,neutral, count))
 print("Precisión negativa = {}% via {}/{} ejemplos".format(negative/count*100.0,negative, count))
 
 #print(analysis.sentiment)
