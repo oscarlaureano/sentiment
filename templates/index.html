@@ -4,7 +4,7 @@
         <title>Speedy Gonzalez Team</title>
     </head>
     <body>
-        <h1>Análisis de sentimiento</h1>
+        <h1>Metalsa</h1>
         <form action="{{ url_for('handle_data') }}" method="POST">
             <input type="text" name="phrase">
             <input type="submit">
@@ -13,6 +13,18 @@
         <p>{{original}}</p>
         <p>{{translated}}</p>
         <p>{{result}}</p>
+        {% endif %}
+
+        
+        {% if info %}
+        <h2>Tweets:</h2>
+        <p> Usernames: {{ info.0 }} </p>
+        <p> Followers: {{ info.1 }} </p>
+        <p> Tweets: {{ info.2 }} </p>
+        <p> Locations: {{ info.3 }} </p>
+        <p> Retweets: {{ info.4 }} </p>
+        <p> Favs: {{ info.5 }} </p>
+        <p> Urls: {{ info.6 }} </p>
         {% endif %}
     </body>
 </html>
