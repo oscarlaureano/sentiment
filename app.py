@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request 
-from textblob import TextBlob
+#from textblob import TextBlob
 import tweepy as tw
 import pandas as pd
 
@@ -41,28 +41,30 @@ def handle_data():
     retweets = []
     favs = []
     tweet_url = []
+    tweet_date = []
     sentiment = []
     
     # Getting the relevant information from the list of Tweet objects
     for tweet in tweets:
         numRows += 1
         ids.append(numRows)
-        user_name.append(tweet.user.screen_name)
+        user_name.append('@'+str(tweet.user.screen_name))
         followers.append(tweet.user.followers_count)
         tweet_text.append(tweet.text)
         user_loc.append(tweet.place)
         retweets.append(tweet.retweet_count)
         favs.append(tweet.favorite_count)
         tweet_url.append("https://twitter.com/"+str(tweet.user.screen_name)+"/status/"+str(tweet.id))
+        tweet_date.append(tweet.created_at)
         sentiment.append('None yet')
     
     # Creating a dictionary with lists 
-    dictTweets = {'id':ids, 'username': user_name, 'followers': followers, 'text': tweet_text, 'location': user_loc, 'retweets': retweets, 'favs': favorite_count, 'link': tweet_url, 'sentiment': sentiment}
+    dictTweets = {'id':ids, 'username': user_name, 'followers': followers, 'text': tweet_text, 'location': user_loc, 'retweets': retweets, 'favs': favs, 'link': tweet_url, 'date': tweet_date, 'sentiment': sentiment}
     # Using the dictionary to create a dataFrame for plotting
     dfTweets = pd.DataFrame(dictTweets)
 
     # Merging info into a list
-    tweets_info = [user_name, followers, tweet_text, user_loc, retweets, favs, tweet_url]
+    tweets_info = [user_name, followers, tweet_text, user_loc, retweets, favs, tweet_url, tweet_date]
     # Showing the results on front-end
     return render_template("index.html", info = tweets_info)
 
