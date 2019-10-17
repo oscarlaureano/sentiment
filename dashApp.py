@@ -82,18 +82,44 @@ def getTweets(phrase):
 # ---------------------------------------------------------------------------------------
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
+colors = {
+    'background': '#EEEEEE',
+    'text': '#7FDBFF',
+    'non-important-text': '#66AFCC',
+    'gray' : '#406D80',
+    'blue' : '#66AFCC'
+}
+
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
-app.layout = html.Div(children=[
-    html.H1(children='Posición de marca en redes sociales'),
+app.layout = html.Div(style={'backgroundColor': colors['background']}, children=[
+    html.H1(
+        children='Posición de marca en redes sociales',
+        style={
+            'color': colors['text']
+        }),
 
-    html.Div(children='''Busca alguna frase o palabras'''),
+    html.Div(children='''Busca alguna frase o palabras''',
+        style={
+            'color': colors['non-important-text']
+        }),
     
     dcc.Input(id='input-phrase', type='text'),
-    html.Button(id='submit-button', n_clicks=0, children='Buscar'),
-    html.Div(id='output-state'),
+    html.Button(id='submit-button', n_clicks=0, children='Buscar',
+        style={
+            'color': colors['gray']
+        }),
+    html.Div(id='output-state',
+        style={
+            'color': colors['non-important-text']
+        }),
 
-    html.Table(id='dataframe-table')
+    html.Table(id='dataframe-table',
+        style={
+            'color': colors['blue'],
+            'backgroundColor': '#DDDDDD'
+
+        })
 ])
 # ---------------------------------------------------------------------------------------
 # --------------------------- /Dash App --------------------------------------------------
