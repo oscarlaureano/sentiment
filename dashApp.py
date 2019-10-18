@@ -93,7 +93,30 @@ def generateInteracciones():
                 'title': 'Interacciones en Twitter'
             }
         }
-    
+
+def generateSentimiento():
+    global dfTweets
+    df = dfTweets[['sentiment','feeling']]
+    data = df.groupby(df['feeling']).count().reset_index()
+
+    values = list(data['sentiment'])
+    labels = list(data['feeling'])
+
+    return {
+        'data': [{
+            'values': values, 
+            'labels': labels, 
+            'type': 'pie',
+            'marker': {
+               'color': ['#80DBFF','#406D80','#60A4BF']
+                }
+            }], 
+        'layout': {
+            'title': 'Analisis de Sentimientos'
+            }
+        }
+
+
 def getTweets(phrase, numOfTweets):
     global dfTweets
 
@@ -114,6 +137,7 @@ def getTweets(phrase, numOfTweets):
     tweet_url = []
     tweet_date = []
     sentiment = []
+    feeling = []
     
     # Getting the relevant information from the list of Tweet objects
     for tweet in tweets:
@@ -127,11 +151,18 @@ def getTweets(phrase, numOfTweets):
         tweet_url.append("https://twitter.com/"+str(tweet.user.screen_name)+"/status/"+str(tweet.id))
         tweet_date.append(tweet.created_at)
         sentiment.append(getSentiment(tweet.text))
+        if sentiment[numRows-1] < 0:
+            feeling.append('negativo')
+        elif sentiment[numRows-1] == 0:
+            feeling.append('neutral')
+        else:
+            feeling.append('positivo')
     
     # Creating a dictionary with lists 
-    dictTweets = {'id':ids, 'username': user_name, 'followers': followers, 'text': tweet_text, 'retweets': retweets, 'favs': favs, 'link': tweet_url, 'date': tweet_date, 'sentiment': sentiment}
+    dictTweets = {'id':ids, 'username': user_name, 'followers': followers, 'text': tweet_text, 'retweets': retweets, 'favs': favs, 'link': tweet_url, 'date': tweet_date, 'sentiment': sentiment, 'feeling': feeling}
     # Using the dictionary to create a dataFrame for plotting
     dfTweets = pd.DataFrame(dictTweets)
+    #dfTweets.to_csv(r'C:/Users/oscar/Desktop/tweets.csv')
 
 # ---------------------------------------------------------------------------------------
 # --------------------------- /Getting Data ---------------------------------------------
@@ -147,7 +178,8 @@ colors = {
     'text': '#7FDBFF',
     'non-important-text': '#66AFCC',
     'gray' : '#406D80',
-    'blue' : '#66AFCC'
+    'blue' : '#66AFCC',
+    'darkblue' : '#26424D'
 }
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
@@ -156,7 +188,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
     html.H1(
         children='Posición de marca en redes sociales',
         style={
-            'color': colors['text']
+            'color': colors['darkblue']
         }
     ),
 
@@ -183,17 +215,34 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
             'clear': 'left'
         }
     ),
-    
+    html.Div(children=[
+        dcc.Graph(
+            id='interacciones',
+            figure={}
+        )],
+        style={
+            'float': 'left',
+            'width': '50%'
+            }
+    ),
+    html.Div(children=[
+        dcc.Graph(
+            id='sentimientos',
+            figure={}
+        )],
+        style={
+            'float': 'left',
+            'width': '50%'
+        }
+    ),
+
     html.Table(id='dataframe-table',
         style={
             'color': colors['blue'],
-            'backgroundColor': '#DDDDDD'
+            'backgroundColor': '#DDDDDD',
+            'clear': 'left'
 
         }
-    ),
-    dcc.Graph(
-        id='interacciones',
-        figure={}
     ),
     html.Div(id='list-of-words',
         style={
@@ -209,7 +258,8 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
 @app.callback([Output('output-state', 'children'),
               Output('dataframe-table', 'children'),
               Output('list-of-words','children'),
-              Output('interacciones','figure')],
+              Output('interacciones','figure'),
+              Output('sentimientos', 'figure')],
               [Input('submit-button', 'n_clicks')],
               [State('input-phrase', 'value'),
               State('my-numeric-input', 'value')])
@@ -219,10 +269,11 @@ def update_output(nclicks, phrase, numOfTweets):
     global dfTweets
     max_rows = numMaxRows
     emptyInteracciones = {'data': [{'x': ['Followers', 'Retweets', 'Favs'], 'y': [0,0,0], 'type': 'bar'}], 'layout': {'title': 'Interacciones en Twitter'}}
+    emptySentimientos = {'data': [{'values': [33,33,34], "labels": ['Positivos', 'Neutrales', 'Negativos'], 'type': 'pie' }], 'layout': {'title': 'Analisis de Sentimientos'}}
     if phrase != None:
         getTweets(phrase,numOfTweets)
-        return u'''Resultados para la búsqueda de: {}'''.format(phrase), generate_table(dfTweets, max_rows), generateCloud(), generateInteracciones()
-    return "",[],[],emptyInteracciones
-    
+        return u'''Resultados para la búsqueda de: {}'''.format(phrase), generate_table(dfTweets, max_rows), generateCloud(), generateInteracciones(), generateSentimiento()
+    return "",[],[],emptyInteracciones, emptySentimientos
+
 if __name__ == '__main__':
     app.run_server(debug=True)
