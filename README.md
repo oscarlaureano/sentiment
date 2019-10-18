@@ -16,6 +16,14 @@ Librerias requeridas:
 
 `pip install dash-daq==0.2.1 `
 
+- Tweepy
+`pip install tweepy `
+
+- Pandas
+`pip install pandas `
+
+- TextBlob
+`pip install textblob`
 
 ### Para correr
 

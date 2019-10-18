@@ -2,9 +2,15 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_daq as daq
 from dash.dependencies import Input, Output, State
 import tweepy as tw
 import pandas as pd
+from textblob import TextBlob
+from textblob.sentiments import NaiveBayesAnalyzer
+from words import positiveWords, negativeWords, stopWords
+import plotly.graph_objects as go
+import re
 
 # ---------------------------------------------------------------------------------------
 # --------------------------- Getting Data ----------------------------------------------
@@ -22,6 +28,45 @@ api = tw.API(auth, wait_on_rate_limit=True)
 
 
 dfTweets = pd.DataFrame()
+numMaxRows = 5
+bagOfWords = dict()
+listBag = []
+lineOfWords = ""
+
+
+def getSentiment(line):
+    global bagOfWords, lineOfWords
+
+    analysis = TextBlob(line, analyzer=NaiveBayesAnalyzer())
+    sentiment = 0
+
+    line = line.lower()
+    line = re.sub(r'[^a-z\s]','',line)
+
+    lineOfWords += line
+
+    words = line.split()
+    words = [word for word in words if word not in stopWords]
+
+    for word in words:
+        if word in positiveWords:
+            sentiment += 0.1
+        elif word in negativeWords:
+            sentiment -= 0.15
+        
+        if word in bagOfWords:
+            bagOfWords[word] += 1
+        else:
+            bagOfWords[word] = 1
+    
+    try:
+        eng=analysis.translate(to='en')
+        sentiment += eng.sentiment.polarity
+        
+        return sentiment
+    except:
+        return sentiment
+
 
 def generate_table(dataframe, max_rows=10):
     return html.Table(
@@ -34,14 +79,29 @@ def generate_table(dataframe, max_rows=10):
         ]) for i in range(min(len(dataframe), max_rows))]
     )
 
-def getTweets(phrase):
+def generateCloud():
+    global listBag
+    listBag = list(bagOfWords.items())
+    return html.Ul([html.Li(x) for x in listBag]) 
+
+def generateInteracciones():
+    return {
+            'data': [
+                {'x': ['Followers', 'Retweets', 'Favs'], 'y': [dfTweets['followers'].sum(),dfTweets['retweets'].sum(),dfTweets['favs'].sum()], 'type': 'bar'}
+            ],
+            'layout': {
+                'title': 'Interacciones en Twitter'
+            }
+        }
+    
+def getTweets(phrase, numOfTweets):
     global dfTweets
 
     # Query to twitter
     tweets = tw.Cursor(api.search,
               q=phrase,
               lang="es",
-              result_type="recent").items(5)
+              result_type="recent").items(numOfTweets)
     
     # Lists for retrieving info
     numRows = 0
@@ -66,15 +126,15 @@ def getTweets(phrase):
         favs.append(tweet.favorite_count)
         tweet_url.append("https://twitter.com/"+str(tweet.user.screen_name)+"/status/"+str(tweet.id))
         tweet_date.append(tweet.created_at)
-        sentiment.append('None yet')
+        sentiment.append(getSentiment(tweet.text))
     
     # Creating a dictionary with lists 
     dictTweets = {'id':ids, 'username': user_name, 'followers': followers, 'text': tweet_text, 'retweets': retweets, 'favs': favs, 'link': tweet_url, 'date': tweet_date, 'sentiment': sentiment}
     # Using the dictionary to create a dataFrame for plotting
     dfTweets = pd.DataFrame(dictTweets)
-    
+
 # ---------------------------------------------------------------------------------------
-# --------------------------- /Getting Data ----------------------------------------------
+# --------------------------- /Getting Data ---------------------------------------------
 # ---------------------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------------------
@@ -82,34 +142,87 @@ def getTweets(phrase):
 # ---------------------------------------------------------------------------------------
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
+colors = {
+    'background': '#EEEEEE',
+    'text': '#7FDBFF',
+    'non-important-text': '#66AFCC',
+    'gray' : '#406D80',
+    'blue' : '#66AFCC'
+}
+
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
-app.layout = html.Div(children=[
-    html.H1(children='Posición de marca en redes sociales'),
+app.layout = html.Div(style={'backgroundColor': colors['background']}, children=[
+    html.H1(
+        children='Posición de marca en redes sociales',
+        style={
+            'color': colors['text']
+        }
+    ),
 
-    html.Div(children='''Busca alguna frase o palabras'''),
+    html.Div(children='''Busca alguna frase o palabras''',
+        style={
+            'color': colors['non-important-text']
+        }
+    ),
     
-    dcc.Input(id='input-phrase', type='text'),
-    html.Button(id='submit-button', n_clicks=0, children='Buscar'),
-    html.Div(id='output-state'),
+    html.Div(children=[
+        dcc.Input(id='input-phrase', type='text', style={'float': 'left'}),
+        daq.NumericInput(id='my-numeric-input', value=5, style={'float': 'left'}),
+        html.Button(id='submit-button', n_clicks=0, children='Buscar',
+            style={
+                'color': colors['gray'],
+                'float': 'left'
+            })
+        ]
+    ),
 
-    html.Table(id='dataframe-table')
+    html.Div(id='output-state',
+        style={
+            'color': colors['non-important-text'],
+            'clear': 'left'
+        }
+    ),
+    
+    html.Table(id='dataframe-table',
+        style={
+            'color': colors['blue'],
+            'backgroundColor': '#DDDDDD'
+
+        }
+    ),
+    dcc.Graph(
+        id='interacciones',
+        figure={}
+    ),
+    html.Div(id='list-of-words',
+        style={
+            'color': colors['non-important-text'],
+            'clear': 'left'
+        }
+    )
+    
 ])
 # ---------------------------------------------------------------------------------------
 # --------------------------- /Dash App --------------------------------------------------
 # ---------------------------------------------------------------------------------------
 @app.callback([Output('output-state', 'children'),
-              Output('dataframe-table', 'children')],
+              Output('dataframe-table', 'children'),
+              Output('list-of-words','children'),
+              Output('interacciones','figure')],
               [Input('submit-button', 'n_clicks')],
-              [State('input-phrase', 'value')])
+              [State('input-phrase', 'value'),
+              State('my-numeric-input', 'value')])
 
-def update_output(nclicks, input1):
+
+def update_output(nclicks, phrase, numOfTweets):
     global dfTweets
-    max_rows = 5
-    if input1 != None:
-        getTweets(input1)
-        return u'''Resultados para la búsqueda de: {}'''.format(input1), generate_table(dfTweets, max_rows)
-    return "",[]
-
+    max_rows = numMaxRows
+    emptyInteracciones = {'data': [{'x': ['Followers', 'Retweets', 'Favs'], 'y': [0,0,0], 'type': 'bar'}], 'layout': {'title': 'Interacciones en Twitter'}}
+    if phrase != None:
+        getTweets(phrase,numOfTweets)
+        return u'''Resultados para la búsqueda de: {}'''.format(phrase), generate_table(dfTweets, max_rows), generateCloud(), generateInteracciones()
+    return "",[],[],emptyInteracciones
+    
 if __name__ == '__main__':
     app.run_server(debug=True)
