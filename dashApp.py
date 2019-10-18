@@ -107,7 +107,9 @@ def generateSentimiento():
             'values': values, 
             'labels': labels, 
             'type': 'pie',
-            'color' : ['#80DBFF','#406D80','#60A4BF']
+            'marker': {
+               'color': ['#80DBFF','#406D80','#60A4BF']
+                }
             }], 
         'layout': {
             'title': 'Analisis de Sentimientos'
@@ -176,7 +178,8 @@ colors = {
     'text': '#7FDBFF',
     'non-important-text': '#66AFCC',
     'gray' : '#406D80',
-    'blue' : '#66AFCC'
+    'blue' : '#66AFCC',
+    'darkblue' : '#26424D'
 }
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
@@ -185,7 +188,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
     html.H1(
         children='Posición de marca en redes sociales',
         style={
-            'color': colors['text']
+            'color': colors['darkblue']
         }
     ),
 
@@ -212,21 +215,34 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
             'clear': 'left'
         }
     ),
-    
+    html.Div(children=[
+        dcc.Graph(
+            id='interacciones',
+            figure={}
+        )],
+        style={
+            'float': 'left',
+            'width': '50%'
+            }
+    ),
+    html.Div(children=[
+        dcc.Graph(
+            id='sentimientos',
+            figure={}
+        )],
+        style={
+            'float': 'left',
+            'width': '50%'
+        }
+    ),
+
     html.Table(id='dataframe-table',
         style={
             'color': colors['blue'],
-            'backgroundColor': '#DDDDDD'
+            'backgroundColor': '#DDDDDD',
+            'clear': 'left'
 
         }
-    ),
-    dcc.Graph(
-        id='interacciones',
-        figure={}
-    ),
-    dcc.Graph(
-            id='sentimientos',
-            figure={}
     ),
     html.Div(id='list-of-words',
         style={
