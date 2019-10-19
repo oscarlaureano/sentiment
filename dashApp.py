@@ -11,6 +11,8 @@ from textblob.sentiments import NaiveBayesAnalyzer
 from words import positiveWords, negativeWords, stopWords
 import plotly.graph_objects as go
 import re
+import collections
+import random
 
 # ---------------------------------------------------------------------------------------
 # --------------------------- Getting Data ----------------------------------------------
@@ -31,11 +33,13 @@ dfTweets = pd.DataFrame()
 numMaxRows = 5
 bagOfWords = dict()
 listBag = []
-lineOfWords = ""
+listWords = []
+
 
 
 def getSentiment(line):
-    global bagOfWords, lineOfWords
+    global bagOfWords
+    global listWords
 
     analysis = TextBlob(line, analyzer=NaiveBayesAnalyzer())
     sentiment = 0
@@ -43,10 +47,10 @@ def getSentiment(line):
     line = line.lower()
     line = re.sub(r'[^a-z\s]','',line)
 
-    lineOfWords += line
-
     words = line.split()
     words = [word for word in words if word not in stopWords]
+
+    listWords.extend(words)
 
     for word in words:
         if word in positiveWords:
@@ -66,56 +70,6 @@ def getSentiment(line):
         return sentiment
     except:
         return sentiment
-
-
-def generate_table(dataframe, max_rows=10):
-    return html.Table(
-        # Header
-        [html.Tr([html.Th(col) for col in dataframe.columns])] +
-
-        # Body
-        [html.Tr([
-            html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
-        ]) for i in range(min(len(dataframe), max_rows))]
-    )
-
-def generateCloud():
-    global listBag
-    listBag = list(bagOfWords.items())
-    return html.Ul([html.Li(x) for x in listBag]) 
-
-def generateInteracciones():
-    return {
-            'data': [
-                {'x': ['Followers', 'Retweets', 'Favs'], 'y': [dfTweets['followers'].sum(),dfTweets['retweets'].sum(),dfTweets['favs'].sum()], 'type': 'bar'}
-            ],
-            'layout': {
-                'title': 'Interacciones en Twitter'
-            }
-        }
-
-def generateSentimiento():
-    global dfTweets
-    df = dfTweets[['sentiment','feeling']]
-    data = df.groupby(df['feeling']).count().reset_index()
-
-    values = list(data['sentiment'])
-    labels = list(data['feeling'])
-
-    return {
-        'data': [{
-            'values': values, 
-            'labels': labels, 
-            'type': 'pie',
-            'marker': {
-               'color': ['#80DBFF','#406D80','#60A4BF']
-                }
-            }], 
-        'layout': {
-            'title': 'Analisis de Sentimientos'
-            }
-        }
-
 
 def getTweets(phrase, numOfTweets):
     global dfTweets
@@ -166,6 +120,135 @@ def getTweets(phrase, numOfTweets):
 
 # ---------------------------------------------------------------------------------------
 # --------------------------- /Getting Data ---------------------------------------------
+# ---------------------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------------------
+# --------------------------- Generating Graphs -----------------------------------------
+# ---------------------------------------------------------------------------------------
+
+def generate_Table(dataframe, max_rows=10):
+    return html.Table(
+        # Header
+        [html.Tr([html.Th(col) for col in dataframe.columns])] +
+
+        # Body
+        [html.Tr([
+            html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
+        ]) for i in range(min(len(dataframe), max_rows))]
+    )
+
+def generate_Bag():
+    global listBag
+    listBag = list(bagOfWords.items())
+    return html.Ul([html.Li(x) for x in listBag])
+
+def generate_Interacciones(type):
+    title = 'Interacciones en Twitter'
+    y = [0,0,0]
+    x = ['Followers', 'Retweets', 'Favs']
+    if type == 'empty':
+        return {
+            'data': [
+                {'x': x, 'y': y, 'type': 'bar'}
+            ],
+            'layout': {
+                'title': title
+            }
+        }
+    else:
+        y = [dfTweets['followers'].sum(),dfTweets['retweets'].sum(),dfTweets['favs'].sum()]
+        return {
+            'data': [
+                {'x': x, 'y': y, 'type': 'bar'}
+            ],
+            'layout': {
+                'title': title
+            }
+        }
+
+def generate_Sentimiento(type):
+    global dfTweets
+
+    title = 'Analisis de Sentimientos'
+    colors = ['lightgreen','lightblue','lightcoral']
+    values = [33,33,34]
+    labels = ['Positivos', 'Neutrales', 'Negativos']
+    
+    if type == 'empty':
+        return {
+            'data': [{
+                'values': values, 
+                "labels": labels, 
+                'type': 'pie', 
+                'hole': '0.4', 
+                'marker': {
+                    'colors': colors
+                    }
+                }], 
+            'layout': {'title': title}
+        }
+    else: 
+        df = dfTweets[['sentiment','feeling']]
+        data = df.groupby(df['feeling']).count().reset_index()
+
+        values = list(data['sentiment'])
+        labels = list(data['feeling'])
+
+        try:
+            pos = labels.index('positivo')
+            colors[pos] = 'lightgreen'
+        except:
+            colors = colors
+        try:
+            pos = labels.index('neutral')
+            colors[pos] = 'lightblue'
+        except:
+            colors = colors
+        try:
+            pos = labels.index('negativo')
+            colors[pos] = 'lightcoral'
+        except:
+            colors = colors
+
+        return {
+            'data': [{
+                'values': values, 
+                'labels': labels, 
+                'type': 'pie',
+                'hole': '0.4',
+                'marker': {
+                'colors': colors
+                    }
+                }], 
+            'layout': {
+                'title': title
+                }
+            }
+
+def generate_Cloud():
+    global listWords
+
+    counter=collections.Counter(listWords)
+
+    wordmap = pd.DataFrame(list(counter.items()), columns=['Words', 'Count'])
+
+    words = dir(go)[:30]
+
+    weights = list(wordmap['Count'])
+
+    data = go.Scatter(x=[random.random() for i in range(30)],
+                    y=[random.random() for i in range(30)],
+                    mode='text',
+                    text= list(wordmap['Words']),
+                    marker={'opacity': 0.3},
+                    textfont={'size': [i*10 for i in weights]})
+    layout = go.Layout({'xaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False},
+                        'yaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False}})
+    
+    return {'data': [data], 'layout': layout}
+
+# ---------------------------------------------------------------------------------------
+# --------------------------- /Generating Graphs -----------------------------------------
 # ---------------------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------------------
@@ -222,7 +305,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
         )],
         style={
             'float': 'left',
-            'width': '50%'
+            'width': '60%'
             }
     ),
     html.Div(children=[
@@ -232,24 +315,24 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
         )],
         style={
             'float': 'left',
-            'width': '50%'
+            'width': '40%'
         }
     ),
-
+    dcc.Graph(
+        id='cloud',
+        figure={},
+        style={
+            'clear': 'left'
+        }
+    ),
     html.Table(id='dataframe-table',
         style={
             'color': colors['blue'],
             'backgroundColor': '#DDDDDD',
-            'clear': 'left'
 
         }
     ),
-    html.Div(id='list-of-words',
-        style={
-            'color': colors['non-important-text'],
-            'clear': 'left'
-        }
-    )
+
     
 ])
 # ---------------------------------------------------------------------------------------
@@ -257,9 +340,9 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
 # ---------------------------------------------------------------------------------------
 @app.callback([Output('output-state', 'children'),
               Output('dataframe-table', 'children'),
-              Output('list-of-words','children'),
               Output('interacciones','figure'),
-              Output('sentimientos', 'figure')],
+              Output('sentimientos', 'figure'),
+              Output('cloud','figure')],
               [Input('submit-button', 'n_clicks')],
               [State('input-phrase', 'value'),
               State('my-numeric-input', 'value')])
@@ -267,13 +350,22 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
 
 def update_output(nclicks, phrase, numOfTweets):
     global dfTweets
+    global listWords
+
+    listWords = []
+    
     max_rows = numMaxRows
-    emptyInteracciones = {'data': [{'x': ['Followers', 'Retweets', 'Favs'], 'y': [0,0,0], 'type': 'bar'}], 'layout': {'title': 'Interacciones en Twitter'}}
-    emptySentimientos = {'data': [{'values': [33,33,34], "labels": ['Positivos', 'Neutrales', 'Negativos'], 'type': 'pie' }], 'layout': {'title': 'Analisis de Sentimientos'}}
+    emptyInteracciones = generate_Interacciones('empty')
+    emptySentimientos = generate_Sentimiento('empty')
     if phrase != None:
         getTweets(phrase,numOfTweets)
-        return u'''Resultados para la búsqueda de: {}'''.format(phrase), generate_table(dfTweets, max_rows), generateCloud(), generateInteracciones(), generateSentimiento()
-    return "",[],[],emptyInteracciones, emptySentimientos
+        outputState = u'''Resultados para la búsqueda de: {}'''.format(phrase)
+        dataframeTable = generate_Table(dfTweets, max_rows)
+        interacciones = generate_Interacciones('filled')
+        sentimientos = generate_Sentimiento('filled')
+        return outputState, dataframeTable, interacciones, sentimientos, generate_Cloud()
+    
+    return "",[],emptyInteracciones, emptySentimientos, {}
 
 if __name__ == '__main__':
     app.run_server(debug=True)
