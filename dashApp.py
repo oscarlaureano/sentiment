@@ -232,16 +232,20 @@ def generate_Cloud():
 
     wordmap = pd.DataFrame(list(counter.items()), columns=['Words', 'Count'])
 
+    wordmap = wordmap.sort_values(by=['Count'],ascending=False)
+
     words = dir(go)[:30]
 
     weights = list(wordmap['Count'])
+
+    color = ['#ADFF2F','#4169E1','#FF6347','#FF69B4','#BA55D3','#FF7F50','#DC143C','#20B2AA']
 
     data = go.Scatter(x=[random.random() for i in range(30)],
                     y=[random.random() for i in range(30)],
                     mode='text',
                     text= list(wordmap['Words']),
                     marker={'opacity': 0.3},
-                    textfont={'size': [i*10 for i in weights]})
+                    textfont={'size': [i*10 for i in weights], 'color':color})
     layout = go.Layout({'xaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False},
                         'yaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False}})
     
@@ -354,7 +358,7 @@ def update_output(nclicks, phrase, numOfTweets):
 
     listWords = []
     
-    max_rows = numMaxRows
+    max_rows = numOfTweets
     emptyInteracciones = generate_Interacciones('empty')
     emptySentimientos = generate_Sentimiento('empty')
     if phrase != None:
